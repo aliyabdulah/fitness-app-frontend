@@ -1,0 +1,22 @@
+--- a/app/(auth)/signup-survey.tsx
++++ b/app/(auth)/signup-survey.tsx
+@@ -356,15 +356,13 @@ export default function SignupSurveyScreen() {
+         const result = await register({
+           ...signupData,
+           ...surveyData,
+         });
+
+-        setIsAuthenticated(true);
+         Alert.alert(
+           'Account Created Successfully!',
+-          'Your TrainX account has been created. Welcome aboard!',
++          'Your TrainX account has been created. Please login to continue.',
+           [
+             {
+-              text: 'Get Started',
+-              onPress: () => router.replace("/(protected)")
++              text: 'Go to Login',
++              onPress: () => router.replace("/(auth)/login")
+             }
+           ]
+         );
