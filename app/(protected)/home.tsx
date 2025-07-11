@@ -6,7 +6,6 @@ import { TodayWorkoutCard } from '../../component/TodayWorkoutCard';
 import { SuggestedPT } from '../../component/SuggestedPT';
 import { DailyCalories } from '../../component/DailyCalories';
 import { RecentAchievements } from '../../component/RecentAchievements';
-import { TrainXBottomNavBar as BottomNavBar } from '../../component/TrainXBottomNavBar';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StandardizedCalendarBar } from '../../component/StandardizedCalendarBar';
 
@@ -73,7 +72,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.secondary }}>
       <StatusBar barStyle="light-content" backgroundColor={colors.secondary} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* Status Bar (custom) */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8 }}>
           <Text style={{ color: colors.white, fontSize: 14 }}>9:41</Text>
@@ -129,9 +128,6 @@ export default function HomeScreen() {
           <RecentAchievements />
         </View>
       </ScrollView>
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
-        <BottomNavBar />
-      </View>
     </SafeAreaView>
   );
 } 

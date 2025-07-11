@@ -11,12 +11,12 @@ const FILTERS = [
   'Pilates',
 ];
 
-interface FilterBarProps {
+interface TrainXFilterBarProps {
   activeFilter: string;
   onChangeFilter: (filter: string) => void;
 }
 
-export function FilterBar({ activeFilter, onChangeFilter }: FilterBarProps) {
+export function TrainXFilterBar({ activeFilter, onChangeFilter }: TrainXFilterBarProps) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 8 }} style={{ marginBottom: 8 }}>
       {FILTERS.map((filter) => {

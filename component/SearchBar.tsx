@@ -1,40 +1,46 @@
 import React from 'react';
-import { View, TextInput } from 'react-native';
-import { colors } from './theme';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { Colors } from './theme';
 
 interface SearchBarProps {
+  placeholder?: string;
   value: string;
   onChangeText: (text: string) => void;
-  placeholder?: string;
 }
 
-export function SearchBar({ value, onChangeText, placeholder }: SearchBarProps) {
+export default function SearchBar({ placeholder = "Search...", value, onChangeText }: SearchBarProps) {
   return (
-    <View style={{ position: 'relative', marginBottom: 24 }}>
+    <View style={styles.container}>
+      <FontAwesome5 name="search" size={16} color={Colors.textSecondary} style={styles.icon} />
       <TextInput
+        style={styles.input}
+        placeholder={placeholder}
+        placeholderTextColor={Colors.textSecondary}
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder || 'Search trainers by name or specialization...'}
-        placeholderTextColor={colors.gray400}
-        style={{
-          width: '100%',
-          backgroundColor: colors.accent,
-          borderRadius: 16,
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          color: colors.white,
-          fontSize: 15,
-          borderWidth: 1,
-          borderColor: colors.gray700,
-        }}
-      />
-      <FontAwesome5
-        name="search"
-        size={18}
-        color={colors.gray400}
-        style={{ position: 'absolute', right: 20, top: '50%', marginTop: -9 }}
       />
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  icon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 16,
+  },
+}); 

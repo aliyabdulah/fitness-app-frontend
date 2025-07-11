@@ -1,46 +1,60 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from './theme';
+import { StyleSheet, Text, View, ViewProps } from 'react-native';
+import { Colors, Typography } from './theme';
 
-interface TrainXLogoProps {
+interface TrainXLogoProps extends ViewProps {
   size?: 'small' | 'medium' | 'large';
+  showText?: boolean;
 }
 
-export default function TrainXLogo({ size = 'medium' }: TrainXLogoProps) {
-  const sizes = {
-    small: { width: 40, height: 40, fontSize: 14 },
-    medium: { width: 100, height: 100, fontSize: 20 },
-    large: { width: 120, height: 120, fontSize: 24 },
-  };
+export default function TrainXLogo({ 
+  size = 'medium', 
+  showText = true, 
+  style,
+  ...props 
+}: TrainXLogoProps) {
+  const logoSize = {
+    small: 32,
+    medium: 48,
+    large: 64,
+  }[size];
 
-  const currentSize = sizes[size];
+  const textSize = {
+    small: 16,
+    medium: 20,
+    large: 24,
+  }[size];
 
   return (
-    <View style={[
-      styles.logoCircle,
-      {
-        width: currentSize.width,
-        height: currentSize.height,
-        borderRadius: currentSize.width / 2,
-      }
-    ]}>
-      <Text style={[styles.logoText, { fontSize: currentSize.fontSize }]}>
-        TrainX
-      </Text>
+    <View style={[styles.container, style]} {...props}>
+      <View style={[styles.logoCircle, { width: logoSize, height: logoSize, borderRadius: logoSize / 2 }]}>
+        <Text style={[styles.logoSymbol, { fontSize: logoSize * 0.5 }]}>T</Text>
+      </View>
+      {showText && (
+        <Text style={[styles.logoText, { fontSize: textSize }]}>TrainX</Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   logoCircle: {
-    borderWidth: 2,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    marginRight: 8,
+  },
+  logoSymbol: {
+    color: Colors.textPrimary,
+    fontWeight: 'bold',
   },
   logoText: {
+    ...Typography.h2,
+    color: Colors.textPrimary,
     fontWeight: 'bold',
-    color: Colors.primary,
   },
 }); 

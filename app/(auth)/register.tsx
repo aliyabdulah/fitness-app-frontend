@@ -21,6 +21,7 @@ const Colors = {
   card: "#2C394B",
   textPrimary: "#FFFFFF",
   textSecondary: "#9CA3AF",
+  error: "#EF4444",
 };
 
 export default function SignupBasicScreen() {
@@ -32,6 +33,8 @@ export default function SignupBasicScreen() {
     password: "",
     profilePicture: null as string | null,
   });
+
+  const [emailError, setEmailError] = useState("");
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -98,17 +101,44 @@ export default function SignupBasicScreen() {
     setFormData({ ...formData, profilePicture: null });
   };
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.com$/;
+    return emailRegex.test(email.toLowerCase());
+  };
+
+  const handleEmailChange = (text: string) => {
+    setFormData({ ...formData, email: text });
+    
+    if (text.trim() !== "" && !validateEmail(text)) {
+      setEmailError("Email must include @ and end with .com");
+    } else {
+      setEmailError("");
+    }
+  };
+
   const isFormValid = () => {
     return (
       formData.firstName.trim() !== "" &&
       formData.lastName.trim() !== "" &&
       formData.email.trim() !== "" &&
-      formData.password.trim() !== ""
+      formData.password.trim() !== "" &&
+      validateEmail(formData.email) &&
+      emailError === ""
     );
   };
 
+  const handleBack = () => {
+    // Navigate back to login or the previous auth screen
+    router.push("/(auth)/login");
+  };
+
   const handleNext = () => {
-    if (!isFormValid()) return;
+    if (!isFormValid()) {
+      if (!validateEmail(formData.email)) {
+        setEmailError("Please enter a valid email address with @ and .com");
+      }
+      return;
+    }
 
     // Navigate to survey with the form data
     router.push({
@@ -132,7 +162,7 @@ export default function SignupBasicScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={styles.backButton}
         >
           <Text style={styles.backText}>←</Text>
@@ -221,14 +251,20 @@ export default function SignupBasicScreen() {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email Address</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                emailError ? styles.inputError : null
+              ]}
               value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              placeholder="Enter your email"
+              onChangeText={handleEmailChange}
+              placeholder="Enter your email (e.g., user@example.com)"
               placeholderTextColor="#9CA3AF"
               keyboardType="email-address"
               autoCapitalize="none"
             />
+            {emailError ? (
+              <Text style={styles.errorText}>{emailError}</Text>
+            ) : null}
           </View>
 
           <View style={styles.inputContainer}>
@@ -346,6 +382,15 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: "transparent",
+  },
+  inputError: {
+    borderColor: Colors.error,
+    borderWidth: 1,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 14,
+    marginTop: 4,
   },
   bottomSection: {
     paddingHorizontal: 20,

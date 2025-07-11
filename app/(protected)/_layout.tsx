@@ -67,20 +67,10 @@ export default function ProtectedLayout() {
           ),
         }}
       />
+      
+      {/* Hidden screens - not shown in tab bar */}
       <Tabs.Screen
         name="index"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="Account"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="testhomepage"
         options={{
           href: null, // Hide from tab bar
         }}

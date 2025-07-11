@@ -1,53 +1,53 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TouchableOpacityProps } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, TouchableOpacityProps, View } from 'react-native';
 import { Colors, Spacing, BorderRadius, Typography } from './theme';
-import Card from './Card';
 
 interface FeatureCardProps extends TouchableOpacityProps {
-  icon: string;
   title: string;
   description: string;
+  icon: string;
+  color?: string;
 }
 
 export default function FeatureCard({
-  icon,
   title,
   description,
+  icon,
+  color = Colors.primary,
   onPress,
   ...props
 }: FeatureCardProps) {
-  const Component = onPress ? TouchableOpacity : View;
-
   return (
-    <Component onPress={onPress} {...props}>
-      <Card style={styles.container}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.iconText}>{icon}</Text>
-        </View>
-        <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-        </View>
-      </Card>
-    </Component>
+    <TouchableOpacity style={styles.card} onPress={onPress} {...props}>
+      <View style={[styles.iconContainer, { backgroundColor: color + '22' }]}>
+        <Text style={styles.icon}>{icon}</Text>
+      </View>
+      <View style={styles.content}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.description}>{description}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: `${Colors.primary}15`,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.lg,
   },
-  iconText: {
+  icon: {
     fontSize: 24,
   },
   content: {
