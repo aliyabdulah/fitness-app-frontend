@@ -63,9 +63,7 @@ export const deleteWorkout = (workoutId: string) =>
 
 // Trainer Functions
 export const getAllTrainers = () => api.get("/api/trainers");
-
-export const getTrainerById = (trainerId: string) =>
-  api.get(`/api/trainers/${trainerId}`);
+export const getTrainerById = (id: string) => api.get(`/api/trainers/${id}`);
 
 export const bookTrainer = async (
   trainerId: string,
