@@ -1,8 +1,19 @@
 import axios from "axios";
 import { setToken, removeToken } from "./storage";
+import Constants from "expo-constants";
+
+const { manifest } = Constants;
+const getApiUrl = () => {
+  // Use your local IP for mobile, localhost for web
+  if (manifest && manifest.debuggerHost) {
+    const localIP = manifest.debuggerHost.split(":").shift();
+    return `http://${localIP}:8000/`;
+  }
+  return "http://localhost:8000/";
+};
 
 export const api = axios.create({
-  baseURL: "http://localhost:8000/", // Change this to your actual TrainX API URL
+  baseURL: getApiUrl(),
 });
 
 export const register = async (userInfo: {
@@ -19,13 +30,13 @@ export const register = async (userInfo: {
   image?: string | null;
 }) => {
   const formData = new FormData();
-  
+
   // Basic signup data
   formData.append("firstName", userInfo.firstName);
   formData.append("lastName", userInfo.lastName);
   formData.append("email", userInfo.email);
   formData.append("password", userInfo.password);
-  
+
   // Survey data
   formData.append("age", userInfo.age.toString());
   formData.append("weight", userInfo.weight.toString());
@@ -33,7 +44,7 @@ export const register = async (userInfo: {
   formData.append("fitnessLevel", userInfo.fitnessLevel);
   formData.append("fitnessGoal", userInfo.fitnessGoal);
   formData.append("workoutFrequency", userInfo.workoutFrequency.toString());
-  
+
   // Profile image if provided
   if (userInfo.image) {
     formData.append("image", {
@@ -45,31 +56,28 @@ export const register = async (userInfo: {
 
   const { data } = await api.post("/api/auth/register", formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      "Content-Type": "multipart/form-data",
     },
   });
 
   if (data.token) {
     await setToken(data.token);
   }
-  
+
   return data;
 };
 
-export const login = async (userInfo: {
-  email: string;
-  password: string;
-}) => {
+export const login = async (userInfo: { email: string; password: string }) => {
   const { data } = await api.post("/api/auth/login", userInfo);
-  
+
   if (data.token) {
     await setToken(data.token);
   }
-  
+
   return data;
 };
 
 export const logout = async () => {
   await removeToken();
   return { success: true };
-}; 
+};
