@@ -49,21 +49,23 @@ export default function ProtectedLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: 'Schedule',
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="calendar" size={size} color={color} />
-          ),
-        }}
-      />
+      
       <Tabs.Screen
         name="analytics"
         options={{
           title: 'Analytics',
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="chart-bar" size={size} color={color} />
+          ),
+        }}
+      />
+
+<Tabs.Screen
+        name="trainer-profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="user" size={size} color={color} />
           ),
         }}
       />
@@ -75,6 +77,23 @@ export default function ProtectedLayout() {
           href: null, // Hide from tab bar
         }}
       />
+      {/* <Tabs.Screen
+        name="schedule"
+        options={{
+          title: 'Schedule',
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="calendar" size={size} color={color} />
+          ),
+        }}
+      /> */}
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+
+
     </Tabs>
   );
 } 

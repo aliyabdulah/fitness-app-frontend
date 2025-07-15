@@ -9,18 +9,19 @@ interface WorkoutCardProps {
   time: string;
   muscles: string[];
   progress: { completed: number; total: number };
-  onViewSchedule: () => void;
+  // onViewSchedule: () => void; //removing schedule for now
 }
 
-export function TrainWorkoutCard({ workoutName, duration, time, muscles, progress, onViewSchedule }: WorkoutCardProps) {
+export function TrainWorkoutCard({ workoutName, duration, time, muscles, progress }: WorkoutCardProps) {
   const percent = progress.total > 0 ? (progress.completed / progress.total) : 0;
   return (
     <View style={{ backgroundColor: colors.accent, borderRadius: 18, padding: 20, marginBottom: 20 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Text style={{ color: colors.white, fontSize: 18, fontWeight: '600' }}>Today's Workout</Text>
-        <TouchableOpacity onPress={onViewSchedule}>
+        {/* removing schedule for now */}
+        {/* <TouchableOpacity onPress={onViewSchedule}>
           <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '500' }}>View Schedule</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary + '33', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>

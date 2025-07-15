@@ -13,7 +13,6 @@ import { colors } from "../../component/theme";
 import { TrainXTrainerCard } from "../../component/TrainXTrainerCard";
 import { TrainXFilterBar } from "../../component/TrainXFilterBar";
 import SearchBar from "../../component/SearchBar";
-import { TrainXBottomNavBar } from "../../component/TrainXBottomNavBar";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAllTrainers } from "../../api/Data";
@@ -224,9 +223,6 @@ export default function ExploreScreen() {
           ))}
         </View>
       </ScrollView>
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-        <TrainXBottomNavBar activeTab="Explore" />
-      </View>
     </SafeAreaView>
   );
 }
