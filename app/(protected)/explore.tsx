@@ -72,33 +72,6 @@ export default function ExploreScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status Bar (custom) */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            paddingHorizontal: 24,
-            paddingTop: 12,
-          }}
-        >
-          <Text style={{ color: colors.white, fontSize: 14 }}>9:41</Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <FontAwesome5
-              name="signal"
-              size={16}
-              color={colors.white}
-              style={{ marginRight: 6 }}
-            />
-            <FontAwesome5
-              name="wifi"
-              size={16}
-              color={colors.white}
-              style={{ marginRight: 6 }}
-            />
-            <FontAwesome5 name="battery-full" size={16} color={colors.white} />
-          </View>
-        </View>
         {/* Header */}
         <View
           style={{
@@ -106,7 +79,7 @@ export default function ExploreScreen() {
             justifyContent: "space-between",
             alignItems: "center",
             paddingHorizontal: 24,
-            paddingTop: 24,
+            paddingTop: 16,
             paddingBottom: 12,
           }}
         >

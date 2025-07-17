@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../component/theme';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -10,50 +10,108 @@ import { AddTrainingModal } from '../../component/AddTrainingModal';
 import { StandardizedCalendarBar } from '../../component/StandardizedCalendarBar';
 import { workoutApi } from '../../api/workouts';
 import { useAuth } from '../../context/AuthContext';
-import { getUserData } from '../../api/storage';
+import { getUserData, removeToken, removeUserData } from '../../api/storage';
+import { EmptyState } from '../../component/EmptyState';
+import moment from 'moment';
 
 const USER_AVATAR = 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg';
 
-// Fallback data to maintain appearance when no backend data
-const fallbackExercises: Exercise[] = [
-  { id: '1', name: 'Bench Press', sets: 4, reps: '8-12', state: 'completed' },
-  { id: '2', name: 'Incline Dumbbell Press', sets: 3, reps: '10-15', state: 'completed' },
-  { id: '3', name: 'Shoulder Press', sets: 3, reps: '12-15', state: 'completed' },
-  { id: '4', name: 'Lateral Raises', sets: 3, reps: '15-20', state: 'current' },
-  { id: '5', name: 'Tricep Dips', sets: 3, reps: '12-15', state: 'pending' },
-  { id: '6', name: 'Pull-ups', sets: 3, reps: '8-10', state: 'pending' },
-];
-
 export default function TrainScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [exercises, setExercises] = useState<Exercise[]>(fallbackExercises);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [workoutState, setWorkoutState] = useState<'running' | 'paused'>('running');
   const [modalVisible, setModalVisible] = useState(false);
   const [currentWorkout, setCurrentWorkout] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasData, setHasData] = useState(false);
+  const [workoutDates, setWorkoutDates] = useState<string[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, setIsAuthenticated } = useAuth();
 
+  // Initial load - only fetch workout dates once
   useEffect(() => {
     if (isAuthenticated) {
+      fetchWorkoutDates();
+      fetchWorkouts();
+      setIsInitialLoad(false);
+    }
+  }, [isAuthenticated]);
+
+  // Separate effect for date changes - only fetch workouts, not dates
+  useEffect(() => {
+    if (isAuthenticated && !isInitialLoad) {
       fetchWorkouts();
     }
-  }, [isAuthenticated, selectedDate]);
+  }, [selectedDate, isAuthenticated, isInitialLoad]);
+
+  useEffect(() => {
+    const testStorage = async () => {
+      const userData = await getUserData();
+      console.log('🧪 Test storage - User data:', userData);
+    };
+    testStorage();
+  }, []);
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear authentication state
+              setIsAuthenticated(false);
+              
+              // Remove stored data
+              await removeToken();
+              await removeUserData();
+              
+              // Navigate to login screen
+              router.replace('/(auth)/login');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   async function fetchWorkouts() {
     try {
-      setIsLoading(true);
+      // Only show loading on initial load, not on date changes
+      if (isInitialLoad) {
+        setIsLoading(true);
+      }
       
       // Get user data from storage
       const userData = await getUserData();
-      if (!userData?._id) {
-        console.log('No user ID found in storage');
-        setExercises(fallbackExercises);
+      console.log('🔍 User data from storage:', userData);
+      
+      if (!userData?.id) {
+        console.log('❌ No user ID found in storage');
+        setExercises([]);
+        setHasData(false);
         return;
       }
 
+      console.log('✅ User ID found:', userData.id);
+
       const dateString = selectedDate.toISOString().split('T')[0];
-      const workoutsData = await workoutApi.getUserWorkouts(userData._id, dateString);
+      console.log('📅 Fetching workouts for date:', dateString);
+      const workoutsData = await workoutApi.getUserWorkouts(userData.id, dateString);
+      
+      console.log('📊 Workouts found:', workoutsData.length);
       
       if (workoutsData.length > 0) {
         const workout = workoutsData[0];
@@ -65,17 +123,37 @@ export default function TrainScreen() {
           reps: ex.reps,
           state: ex.state,
         })));
+        setHasData(true);
       } else {
-        // Keep fallback data if no workout found
         setCurrentWorkout(null);
-        setExercises(fallbackExercises);
+        setExercises([]);
+        setHasData(false);
       }
     } catch (error) {
       console.error('Error fetching workouts:', error);
-      // Keep fallback data on error
-      setExercises(fallbackExercises);
+      setExercises([]);
+      setHasData(false);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  // Remove fetchWorkoutDates from the date change effect
+  async function fetchWorkoutDates() {
+    try {
+      const userData = await getUserData();
+      if (!userData?.id) return;
+
+      const workoutsData = await workoutApi.getUserWorkouts(userData.id);
+      
+      const dates = workoutsData.map((workout: any) => 
+        moment(workout.scheduledDate).format('YYYY-MM-DD')
+      );
+      
+      setWorkoutDates(dates);
+      console.log('📅 All workout dates:', dates);
+    } catch (error) {
+      console.error('Error fetching workout dates:', error);
     }
   }
 
@@ -120,6 +198,72 @@ export default function TrainScreen() {
 
   const completedCount = exercises.filter(e => e.state === 'completed').length;
 
+  // Add navigation function
+  const handleExplorePress = () => {
+    router.push('/(protected)/explore');
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <View style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.secondary,
+      }}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  // Show empty state when no data
+  if (!hasData || exercises.length === 0) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.secondary }}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.secondary} />
+        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
+            <View>
+              <Text style={{ color: colors.white, fontSize: 26, fontWeight: 'bold' }}>Exercises</Text>
+              <Text style={{ color: colors.gray400, fontSize: 13, marginTop: 4 }}>Find your workout</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity 
+                style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 10, marginRight: 8 }}
+                onPress={handleSignOut}
+              >
+                <FontAwesome5 name="power-off" size={18} color={colors.white} />
+              </TouchableOpacity>
+              <Image source={{ uri: USER_AVATAR }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+            </View>
+          </View>
+          
+          {/* Calendar Bar */}
+          <View style={{ paddingHorizontal: 24 }}>
+            <StandardizedCalendarBar
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+              onWeekChange={handleWeekChange}
+              workoutDates={workoutDates}
+            />
+          </View>
+          
+          {/* Empty State */}
+          <EmptyState
+            icon="dumbbell"
+            title="No exercises today"
+            message="Get a personal trainer to set up your workout plan! They'll create customized exercises tailored to your fitness goals and schedule."
+            iconColor={colors.primary}
+            showExploreButton={true}
+            onExplorePress={handleExplorePress}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.secondary }}>
       <StatusBar barStyle="light-content" backgroundColor={colors.secondary} />
@@ -131,8 +275,11 @@ export default function TrainScreen() {
             <Text style={{ color: colors.gray400, fontSize: 13, marginTop: 4 }}>Find your workout</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <TouchableOpacity style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 10, marginRight: 8 }}>
-              <FontAwesome5 name="bell" size={18} color={colors.white} />
+            <TouchableOpacity 
+              style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 10, marginRight: 8 }}
+              onPress={handleSignOut}
+            >
+              <FontAwesome5 name="power-off" size={18} color={colors.white} />
             </TouchableOpacity>
             <Image source={{ uri: USER_AVATAR }} style={{ width: 40, height: 40, borderRadius: 20 }} />
           </View>
@@ -144,6 +291,7 @@ export default function TrainScreen() {
             selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
             onWeekChange={handleWeekChange}
+            workoutDates={workoutDates}
           />
         </View>
         

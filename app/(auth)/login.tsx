@@ -13,6 +13,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    SafeAreaView, // Add this import
 } from "react-native";
 
 const Colors = {
@@ -77,118 +78,120 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar style="light" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Logo Section */}
-        <View style={styles.logoSection}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>TrainX</Text>
-            </View>
-          </View>
-        </View>
+        <StatusBar style="light" />
 
-        {/* Title Section */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
-        </View>
-
-        {/* Form Section */}
-        <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              placeholder="Enter your email"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                value={formData.password}
-                onChangeText={(text) => setFormData({ ...formData, password: text })}
-                placeholder="Enter your password"
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Text style={styles.eyeText}>{showPassword ? "🙈" : "👁️"}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Forgot Password Link */}
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={styles.forgotPasswordContainer}
-            onPress={handleForgotPassword}
+            onPress={() => router.back()}
+            style={styles.backButton}
           >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Text style={styles.backText}>←</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
 
-      {/* Bottom Section */}
-      <View style={styles.bottomSection}>
-        {/* Login Button */}
-        <TouchableOpacity
-          style={[
-            styles.loginButton,
-            (!isFormValid() || isLoading) && styles.loginButtonDisabled,
-          ]}
-          onPress={handleLogin}
-          disabled={!isFormValid() || isLoading}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
         >
-          <Text
-            style={[
-              styles.loginButtonText,
-              (!isFormValid() || isLoading) && styles.loginButtonTextDisabled,
-            ]}
-          >
-            {isLoading ? "Logging in..." : "Login"}
-          </Text>
-        </TouchableOpacity>
+          {/* Logo Section */}
+          <View style={styles.logoSection}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Text style={styles.logoText}>TrainX</Text>
+              </View>
+            </View>
+          </View>
 
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={handleSignUp}>
-            <Text style={styles.signUpLink}>Sign Up</Text>
+          {/* Title Section */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Welcome Back!</Text>
+            <Text style={styles.subtitle}>Sign in to your account</Text>
+          </View>
+
+          {/* Form Section */}
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.email}
+                onChangeText={(text) => setFormData({ ...formData, email: text })}
+                placeholder="Enter your email"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={formData.password}
+                  onChangeText={(text) => setFormData({ ...formData, password: text })}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Text style={styles.eyeText}>{showPassword ? "🙈" : "👁️"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              style={styles.forgotPasswordContainer}
+              onPress={handleForgotPassword}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Bottom Section */}
+        <View style={styles.bottomSection}>
+          {/* Login Button */}
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              (!isFormValid() || isLoading) && styles.loginButtonDisabled,
+            ]}
+            onPress={handleLogin}
+            disabled={!isFormValid() || isLoading}
+          >
+            <Text
+              style={[
+                styles.loginButtonText,
+                (!isFormValid() || isLoading) && styles.loginButtonTextDisabled,
+              ]}
+            >
+              {isLoading ? "Logging in..." : "Login"}
+            </Text>
           </TouchableOpacity>
+
+          {/* Sign Up Link */}
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={handleSignUp}>
+              <Text style={styles.signUpLink}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -196,6 +199,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",

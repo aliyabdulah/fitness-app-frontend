@@ -1,5 +1,5 @@
 import axios from "axios";
-import { setToken, removeToken } from "./storage";
+import { setToken, removeToken, setUserData, removeUserData } from "./storage";
 import Constants from "expo-constants";
 
 const { manifest } = Constants;
@@ -74,10 +74,16 @@ export const login = async (userInfo: { email: string; password: string }) => {
     await setToken(data.token);
   }
 
+  // Store user data separately
+  if (data.user) {
+    await setUserData(data.user);
+  }
+
   return data;
 };
 
 export const logout = async () => {
   await removeToken();
+  await removeUserData(); // Also remove user data
   return { success: true };
 };

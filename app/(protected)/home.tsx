@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StatusBar, Image, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StatusBar, Image, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { colors } from '../../component/theme';
 import { TrainXStatsCard as StatsCard } from '../../component/TrainXStatsCard';
 import { TodayWorkoutCard } from '../../component/TodayWorkoutCard';
@@ -8,6 +8,10 @@ import { DailyCalories } from '../../component/DailyCalories';
 import { RecentAchievements } from '../../component/RecentAchievements';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StandardizedCalendarBar } from '../../component/StandardizedCalendarBar';
+import { homeApi, UserData, Workout, Trainer } from '../../api/home';
+import { getUserData, removeToken, removeUserData } from '../../api/storage';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'expo-router';
 
 const stats = [
   {
@@ -58,41 +62,116 @@ const stats = [
 
 export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [todayWorkout, setTodayWorkout] = useState<Workout | null>(null);
+  const [suggestedTrainers, setSuggestedTrainers] = useState<Trainer[]>([]);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const { isAuthenticated, setIsAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Fetch data when component mounts
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchHomeData();
+    }
+  }, [isAuthenticated]);
+
+  // Fetch data when date changes
+  useEffect(() => {
+    if (isAuthenticated && userData?._id) {
+      fetchTodayWorkout();
+    }
+  }, [selectedDate, userData]);
+
+  const fetchHomeData = async () => {
+    try {
+      const user = await getUserData();
+      setUserData(user as UserData);
+
+      // Fetch suggested trainers
+      const trainers = await homeApi.getSuggestedTrainers();
+      setSuggestedTrainers(trainers);
+
+      // Fetch today's workout
+      if (user?._id) {
+        const workout = await homeApi.getTodayWorkout(user._id);
+        setTodayWorkout(workout);
+      }
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+    }
+  };
+
+  const fetchTodayWorkout = async () => {
+    try {
+      if (userData?._id) {
+        const workout = await homeApi.getTodayWorkout(userData._id);
+        setTodayWorkout(workout);
+      }
+    } catch (error) {
+      console.error('Error fetching today\'s workout:', error);
+    }
+  };
 
   function handleDateSelect(date: Date) {
     setSelectedDate(date);
-    // TODO: Fetch data for selected date
   }
 
   function handleWeekChange(startDate: Date, endDate: Date) {
-    // TODO: Handle week change, maybe fetch data for the new week
     console.log('Week changed:', startDate, endDate);
   }
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear authentication state
+              setIsAuthenticated(false);
+              
+              // Remove stored data
+              await removeToken();
+              await removeUserData();
+              
+              // Navigate to login screen
+              router.replace('/(auth)/login');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.secondary }}>
       <StatusBar barStyle="light-content" backgroundColor={colors.secondary} />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-        {/* Status Bar (custom) */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8 }}>
-          <Text style={{ color: colors.white, fontSize: 14 }}>9:41</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <FontAwesome5 name="signal" size={16} color={colors.white} style={{ marginRight: 6 }} />
-            <FontAwesome5 name="wifi" size={16} color={colors.white} style={{ marginRight: 6 }} />
-            <FontAwesome5 name="battery-full" size={16} color={colors.white} />
-          </View>
-        </View>
         {/* Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
           <View>
             <Text style={{ color: colors.white, fontSize: 24, fontWeight: 'bold' }}>TrainX</Text>
-            <Text style={{ color: colors.gray400, fontSize: 12 }}>Hello, Ahmed</Text>
+            <Text style={{ color: colors.gray400, fontSize: 12 }}>Hello, {userData?.firstName || 'Ahmed'}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 8, marginRight: 8 }}>
-              <FontAwesome5 name="bell" size={18} color={colors.white} />
-            </View>
-            <Image source={{ uri: 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg' }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+            <TouchableOpacity
+              style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 8, marginRight: 8 }}
+              onPress={handleSignOut}
+            >
+              <FontAwesome5 name="power-off" size={18} color={colors.white} />
+            </TouchableOpacity>
+            <Image source={{ uri: userData?.profilePicture || 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg' }} style={{ width: 40, height: 40, borderRadius: 20 }} />
           </View>
         </View>
         {/* Calendar Bar */}
@@ -113,11 +192,11 @@ export default function HomeScreen() {
         </View>
         {/* Today Workout Card */}
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <TodayWorkoutCard />
+          <TodayWorkoutCard workout={todayWorkout} />
         </View>
         {/* Suggested PT */}
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <SuggestedPT />
+          <SuggestedPT trainers={suggestedTrainers} />
         </View>
         {/* Daily Calories */}
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>

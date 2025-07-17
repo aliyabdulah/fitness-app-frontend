@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView, // Add this import
 } from "react-native";
 
 const Colors = {
@@ -153,155 +154,157 @@ export default function SignupBasicScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar style="light" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-        >
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressDot, styles.progressActive]} />
-          <View style={styles.progressDot} />
-        </View>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Title Section */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Let's get started!</Text>
-          <Text style={styles.subtitle}>Tell us about yourself</Text>
+        <StatusBar style="light" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.backButton}
+          >
+            <Text style={styles.backText}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressDot, styles.progressActive]} />
+            <View style={styles.progressDot} />
+          </View>
         </View>
 
-        {/* Form Section */}
-        <View style={styles.formContainer}>
-          {/* Profile Picture Section */}
-          <View style={styles.photoSection}>
-            <Text style={styles.photoLabel}>Profile Picture (Optional)</Text>
-            <View style={styles.photoContainer}>
-              {formData.profilePicture ? (
-                <View style={styles.photoWrapper}>
-                  <Image 
-                    source={{ uri: formData.profilePicture }} 
-                    style={styles.profileImage} 
-                  />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Title Section */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Let's get started!</Text>
+            <Text style={styles.subtitle}>Tell us about yourself</Text>
+          </View>
+
+          {/* Form Section */}
+          <View style={styles.formContainer}>
+            {/* Profile Picture Section */}
+            <View style={styles.photoSection}>
+              <Text style={styles.photoLabel}>Profile Picture (Optional)</Text>
+              <View style={styles.photoContainer}>
+                {formData.profilePicture ? (
+                  <View style={styles.photoWrapper}>
+                    <Image 
+                      source={{ uri: formData.profilePicture }} 
+                      style={styles.profileImage} 
+                    />
+                    <TouchableOpacity 
+                      style={styles.removePhotoButton}
+                      onPress={removePhoto}
+                    >
+                      <Text style={styles.removePhotoText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
                   <TouchableOpacity 
-                    style={styles.removePhotoButton}
-                    onPress={removePhoto}
+                    style={styles.addPhotoButton} 
+                    onPress={pickImage}
                   >
-                    <Text style={styles.removePhotoText}>×</Text>
+                    <Text style={styles.addPhotoIcon}>📷</Text>
+                    <Text style={styles.addPhotoText}>Add Photo</Text>
                   </TouchableOpacity>
-                </View>
-              ) : (
+                )}
+              </View>
+              {formData.profilePicture && (
                 <TouchableOpacity 
-                  style={styles.addPhotoButton} 
+                  style={styles.changePhotoButton}
                   onPress={pickImage}
                 >
-                  <Text style={styles.addPhotoIcon}>📷</Text>
-                  <Text style={styles.addPhotoText}>Add Photo</Text>
+                  <Text style={styles.changePhotoText}>Change Photo</Text>
                 </TouchableOpacity>
               )}
             </View>
-            {formData.profilePicture && (
-              <TouchableOpacity 
-                style={styles.changePhotoButton}
-                onPress={pickImage}
-              >
-                <Text style={styles.changePhotoText}>Change Photo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>First Name</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.firstName}
-              onChangeText={(text) =>
-                setFormData({ ...formData, firstName: text })
-              }
-              placeholder="Enter your first name"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>First Name</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.firstName}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, firstName: text })
+                }
+                placeholder="Enter your first name"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Last Name</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.lastName}
-              onChangeText={(text) =>
-                setFormData({ ...formData, lastName: text })
-              }
-              placeholder="Enter your last name"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Last Name</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.lastName}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, lastName: text })
+                }
+                placeholder="Enter your last name"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={[
-                styles.input,
-                emailError ? styles.inputError : null
-              ]}
-              value={formData.email}
-              onChangeText={handleEmailChange}
-              placeholder="Enter your email (e.g., user@example.com)"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {emailError ? (
-              <Text style={styles.errorText}>{emailError}</Text>
-            ) : null}
-          </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  emailError ? styles.inputError : null
+                ]}
+                value={formData.email}
+                onChangeText={handleEmailChange}
+                placeholder="Enter your email (e.g., user@example.com)"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {emailError ? (
+                <Text style={styles.errorText}>{emailError}</Text>
+              ) : null}
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
-              placeholder="Enter your password"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.password}
+                onChangeText={(text) => setFormData({ ...formData, password: text })}
+                placeholder="Enter your password"
+                placeholderTextColor="#9CA3AF"
+                secureTextEntry
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Bottom Button */}
-      <View style={styles.bottomSection}>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            !isFormValid() && styles.nextButtonDisabled,
-          ]}
-          onPress={handleNext}
-          disabled={!isFormValid()}
-        >
-          <Text
+        {/* Bottom Button */}
+        <View style={styles.bottomSection}>
+          <TouchableOpacity
             style={[
-              styles.nextButtonText,
-              !isFormValid() && styles.nextButtonTextDisabled,
+              styles.nextButton,
+              !isFormValid() && styles.nextButtonDisabled,
             ]}
+            onPress={handleNext}
+            disabled={!isFormValid()}
           >
-            Next
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            <Text
+              style={[
+                styles.nextButtonText,
+                !isFormValid() && styles.nextButtonTextDisabled,
+              ]}
+            >
+              Next
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -309,6 +312,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",

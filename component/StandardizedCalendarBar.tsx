@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, Dimensions } from 'react-native';
 import moment from 'moment';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { colors } from './theme';
@@ -11,25 +11,47 @@ interface StandardizedCalendarBarProps {
   style?: any;
   headerStyle?: any;
   calendarStripStyle?: any;
+  workoutDates?: string[]; // Add this prop for workout dates
 }
 
-const DAY_CIRCLE_SIZE = 48;
-const DAY_CIRCLE_SIZE_SELECTED = 56;
-const DAY_SPACING = 12;
+// Get screen width to calculate day container width
+const screenWidth = Dimensions.get('window').width;
+const HORIZONTAL_PADDING = 48; // 24px padding on each side
+const AVAILABLE_WIDTH = screenWidth - HORIZONTAL_PADDING;
+const DAY_CONTAINER_WIDTH = AVAILABLE_WIDTH / 7; // Divide available width by 7 days
+const DAY_CIRCLE_SIZE = Math.min(DAY_CONTAINER_WIDTH - 8, 48); // Ensure circle fits in container
+const DAY_CIRCLE_SIZE_SELECTED = Math.min(DAY_CONTAINER_WIDTH - 8, 56); // Selected circle can be slightly larger
+const DAY_SPACING = 0; // No gap since we're using full width
 
-function getWeekDays(selectedDate: Date) {
-  // Start from Monday
-  const start = moment(selectedDate).startOf('week').add(1, 'day');
-  return Array.from({ length: 7 }, (_, i) => {
+function getWeekDays(weekStart: Date, selectedDate: Date, workoutDates: string[] = []) {
+  // Start from the provided week start (Monday)
+  const start = moment(weekStart);
+  
+  console.log('🔍 Calendar Debug:');
+  console.log('  Week start:', start.format('YYYY-MM-DD'));
+  console.log('  Selected date:', moment(selectedDate).format('YYYY-MM-DD'));
+  console.log('  Workout dates:', workoutDates);
+  
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
     const m = moment(start).add(i, 'days');
+    const dateString = m.format('YYYY-MM-DD');
+    const hasWorkout = workoutDates.includes(dateString);
+    
+    console.log(`  Day ${i + 1}: ${dateString} (${m.format('ddd')}) - Has workout: ${hasWorkout}`);
+    
     return {
       date: m.toDate(),
-      day: m.format('ddd'),
+      day: m.isSame(new Date(), 'day') ? 'Today' : m.format('ddd'),
       dayNum: m.date(),
       isSelected: m.isSame(selectedDate, 'day'),
       isToday: m.isSame(new Date(), 'day'),
+      hasWorkout: hasWorkout,
     };
   });
+  
+  console.log('  Generated week days:', weekDays.map(d => `${d.dayNum} (${d.hasWorkout ? 'has workout' : 'no workout'})`));
+  
+  return weekDays;
 }
 
 export function StandardizedCalendarBar({
@@ -38,30 +60,32 @@ export function StandardizedCalendarBar({
   onWeekChange,
   style,
   headerStyle,
-  calendarStripStyle
+  calendarStripStyle,
+  workoutDates = [] // Default to empty array
 }: StandardizedCalendarBarProps) {
-  const [weekStart, setWeekStart] = useState(() => moment(selectedDate).startOf('week').add(1, 'day').toDate());
-
-  const weekDays = getWeekDays(selectedDate);
+  // Initialize week start based on selected date, but keep it stable
+  const [weekStart, setWeekStart] = useState(() => 
+    moment(selectedDate).startOf('week').add(1, 'day').toDate()
+  );
+  
+  const weekDays = getWeekDays(weekStart, selectedDate, workoutDates);
 
   const handleChevron = useCallback((dir: 'prev' | 'next') => {
-    const newStart = moment(weekStart).add(dir === 'prev' ? -7 : 7, 'days');
-    setWeekStart(newStart.toDate());
-    const newSelected = moment(newStart).toDate();
+    // Move the week start by 7 days
+    const newWeekStart = moment(weekStart).add(dir === 'prev' ? -7 : 7, 'days').toDate();
+    setWeekStart(newWeekStart);
+    
+    // Select the same day of the week in the new week
+    const dayOfWeek = moment(selectedDate).day();
+    const newSelected = moment(newWeekStart).add(dayOfWeek === 0 ? 6 : dayOfWeek - 1, 'days').toDate();
+    
+    console.log(`🔄 Chevron ${dir}: ${moment(selectedDate).format('YYYY-MM-DD')} -> ${moment(newSelected).format('YYYY-MM-DD')}`);
     onDateSelect(newSelected);
-    onWeekChange?.(
-      newStart.toDate(),
-      moment(newStart).add(6, 'days').toDate()
-    );
-  }, [weekStart, onDateSelect, onWeekChange]);
-
-  // When selectedDate changes, update weekStart if it's outside the current week
-  React.useEffect(() => {
-    const start = moment(selectedDate).startOf('week').add(1, 'day').toDate();
-    if (!moment(weekStart).isSame(start, 'day')) {
-      setWeekStart(start);
-    }
-  }, [selectedDate]);
+    
+    // Calculate new week range
+    const newWeekEnd = moment(newWeekStart).add(6, 'days').toDate();
+    onWeekChange?.(newWeekStart, newWeekEnd);
+  }, [weekStart, selectedDate, onDateSelect, onWeekChange]);
 
   return (
     <View style={[styles.container, style]}> 
@@ -81,43 +105,55 @@ export function StandardizedCalendarBar({
       <View style={[styles.daysRow, calendarStripStyle]}> 
         <FlatList
           data={weekDays}
-          keyExtractor={d => d.day + d.dayNum}
+          keyExtractor={d => d.day + d.dayNum + d.date.getTime()}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: DAY_SPACING }}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => onDateSelect(item.date)}
-              style={({ pressed }) => [
-                styles.dayContainer,
-                { opacity: pressed ? 0.7 : 1 }
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Select ${item.day} ${item.dayNum}`}
-            >
-              <View style={[ 
-                styles.dayCircle,
-                item.isSelected ? styles.dayCircleSelected : styles.dayCircleUnselected,
-                item.isToday && !item.isSelected ? styles.dayCircleToday : null,
-                { width: item.isSelected ? DAY_CIRCLE_SIZE_SELECTED : DAY_CIRCLE_SIZE, height: item.isSelected ? DAY_CIRCLE_SIZE_SELECTED : DAY_CIRCLE_SIZE }
-              ]}>
-                <Text style={[ 
-                  styles.dayNum,
-                  item.isSelected ? styles.dayNumSelected : styles.dayNumUnselected,
-                  item.isToday && !item.isSelected ? styles.dayNumToday : null
+          contentContainerStyle={{ width: '100%' }}
+          renderItem={({ item }) => {
+            console.log(`🎯 Rendering day ${item.dayNum}: selected=${item.isSelected}, hasWorkout=${item.hasWorkout}`);
+            return (
+              <Pressable
+                onPress={() => onDateSelect(item.date)}
+                style={({ pressed }) => [
+                  styles.dayContainer,
+                  { opacity: pressed ? 0.7 : 1 }
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Select ${item.day} ${item.dayNum}${item.hasWorkout ? ' - Has workout' : ''}`}
+              >
+                <View style={[ 
+                  styles.dayCircle,
+                  item.isSelected ? styles.dayCircleSelected : styles.dayCircleUnselected,
+                  { 
+                    width: item.isSelected ? DAY_CIRCLE_SIZE_SELECTED : DAY_CIRCLE_SIZE, 
+                    height: item.isSelected ? DAY_CIRCLE_SIZE_SELECTED : DAY_CIRCLE_SIZE 
+                  }
                 ]}>
-                  {item.dayNum}
+                  <Text style={[ 
+                    styles.dayNum,
+                    item.isSelected ? styles.dayNumSelected : styles.dayNumUnselected,
+                  ]}>
+                    {item.dayNum}
+                  </Text>
+                  
+                  {/* Workout indicator dot - show for all dates with workouts */}
+                  {item.hasWorkout && (
+                    <View style={styles.workoutDot} />
+                  )}
+                </View>
+                <Text style={[ 
+                  styles.dayLabel,
+                  item.isSelected ? styles.dayLabelSelected : styles.dayLabelUnselected,
+                ]}>
+                  {item.day}
                 </Text>
-              </View>
-              <Text style={[ 
-                styles.dayLabel,
-                item.isSelected ? styles.dayLabelSelected : styles.dayLabelUnselected,
-                item.isToday && !item.isSelected ? styles.dayLabelToday : null
-              ]}>
-                {item.day}
-              </Text>
-            </Pressable>
-          )}
+                {/* Subtle underline for today's date */}
+                {item.isToday && (
+                  <View style={styles.todayUnderline} />
+                )}
+              </Pressable>
+            );
+          }}
         />
       </View>
     </View>
@@ -160,27 +196,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: DAY_CIRCLE_SIZE_SELECTED + 16,
-    paddingHorizontal: 4,
+    paddingHorizontal: 0, // Remove horizontal padding since we're using full width
   },
   dayContainer: {
     alignItems: 'center',
-    width: DAY_CIRCLE_SIZE_SELECTED,
+    width: DAY_CONTAINER_WIDTH, // Use calculated width
+    position: 'relative', // For today's underline positioning
   },
   dayCircle: {
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: DAY_CIRCLE_SIZE_SELECTED / 2,
     marginBottom: 4,
+    position: 'relative', // Add this for workout dot positioning
   },
   dayCircleSelected: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.accent, // Keep orange for selected dates
   },
   dayCircleUnselected: {
     backgroundColor: '#232F3E',
-  },
-  dayCircleToday: {
-    borderWidth: 2,
-    borderColor: colors.accent,
   },
   dayNum: {
     fontSize: 20,
@@ -194,9 +228,6 @@ const styles = StyleSheet.create({
   dayNumUnselected: {
     color: colors.white,
     opacity: 0.9,
-  },
-  dayNumToday: {
-    color: colors.accent,
   },
   dayLabel: {
     fontSize: 13,
@@ -213,8 +244,23 @@ const styles = StyleSheet.create({
     color: colors.white,
     opacity: 0.7,
   },
-  dayLabelToday: {
-    color: colors.accent,
-    fontWeight: '700',
+  // Updated workout indicator styles
+  workoutDot: {
+    position: 'absolute',
+    bottom: 6, // Moved up slightly for better spacing
+    width: 4, // Smaller dot
+    height: 4, // Smaller dot
+    borderRadius: 2, // Half of width/height
+    backgroundColor: colors.primary, // Always orange
+  },
+  // New style for today's underline
+  todayUnderline: {
+    position: 'absolute',
+    bottom: -2,
+    width: 20,
+    height: 2,
+    backgroundColor: colors.accent,
+    borderRadius: 1,
+    opacity: 0.6, // Subtle underline
   },
 }); 

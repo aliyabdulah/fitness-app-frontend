@@ -60,15 +60,7 @@ export default function ProtectedLayout() {
         }}
       />
 
-<Tabs.Screen
-        name="trainer-profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="user" size={size} color={color} />
-          ),
-        }}
-      />
+
       
       {/* Hidden screens - not shown in tab bar */}
       <Tabs.Screen
@@ -77,6 +69,13 @@ export default function ProtectedLayout() {
           href: null, // Hide from tab bar
         }}
       />
+
+<Tabs.Screen
+  name="trainer-profile"
+  options={{
+    href: null, // Hide from tab bar
+  }}
+/>
       {/* <Tabs.Screen
         name="schedule"
         options={{
