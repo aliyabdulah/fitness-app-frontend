@@ -7,9 +7,19 @@ interface SearchBarProps {
   placeholder?: string;
   value: string;
   onChangeText: (text: string) => void;
+  onSubmitEditing?: () => void;
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
+  autoFocus?: boolean;
 }
 
-export default function SearchBar({ placeholder = "Search...", value, onChangeText }: SearchBarProps) {
+export default function SearchBar({ 
+  placeholder = "Search...", 
+  value, 
+  onChangeText, 
+  onSubmitEditing,
+  returnKeyType = 'done',
+  autoFocus = false
+}: SearchBarProps) {
   return (
     <View style={styles.container}>
       <FontAwesome5 name="search" size={16} color={Colors.textSecondary} style={styles.icon} />
@@ -19,6 +29,9 @@ export default function SearchBar({ placeholder = "Search...", value, onChangeTe
         placeholderTextColor={Colors.textSecondary}
         value={value}
         onChangeText={onChangeText}
+        onSubmitEditing={onSubmitEditing}
+        returnKeyType={returnKeyType}
+        autoFocus={autoFocus}
       />
     </View>
   );

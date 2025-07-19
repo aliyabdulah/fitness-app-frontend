@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StatusBar, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Colors } from "../component/theme";
+import { DateProvider } from '../context/DateProvider'; // Import the provider component
 
 const queryClient = new QueryClient();
 
@@ -41,29 +42,33 @@ export default function RootLayout() {
   }
   
   return (
-    <SafeAreaProvider>
-      <StatusBar
-        barStyle="light-content"
-        translucent={false}
-        backgroundColor={Colors.background}
-      />
-      <QueryClientProvider client={queryClient}>
-        <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
-          <Stack screenOptions={{ 
-            headerShown: false,
-            contentStyle: { backgroundColor: Colors.background }
-          }}>
-            {isAuthenticated ? (
-              <Stack.Screen name="(protected)" />
-            ) : (
-              <>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(auth)" />
-              </>
-            )}
-          </Stack>
-        </AuthContext.Provider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    
+      <SafeAreaProvider>
+        <StatusBar
+          barStyle="light-content"
+          translucent={false}
+          backgroundColor={Colors.background}
+        />
+        <QueryClientProvider client={queryClient}>
+          <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
+            <DateProvider>
+              <Stack screenOptions={{ 
+                headerShown: false,
+                contentStyle: { backgroundColor: Colors.background }
+              }}>
+                {isAuthenticated ? (
+                  <Stack.Screen name="(protected)" />
+                ) : (
+                  <>
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                  </>
+                )}
+              </Stack>
+            </DateProvider>
+          </AuthContext.Provider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    
   );
 } 

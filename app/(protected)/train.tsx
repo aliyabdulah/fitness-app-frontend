@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router'; // Remove useLocalSearchParams since we're using context
 import { colors } from '../../component/theme';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { TrainWorkoutCard } from '../../component/TrainWorkoutCard';
@@ -9,15 +9,17 @@ import { WorkoutStats } from '../../component/WorkoutStats';
 import { AddTrainingModal } from '../../component/AddTrainingModal';
 import { StandardizedCalendarBar } from '../../component/StandardizedCalendarBar';
 import { workoutApi } from '../../api/workouts';
+import { homeApi } from '../../api/home';
 import { useAuth } from '../../context/AuthContext';
+import { useDate } from '../../context/DateContext'; // Add this import
 import { getUserData, removeToken, removeUserData } from '../../api/storage';
 import { EmptyState } from '../../component/EmptyState';
 import moment from 'moment';
 
-const USER_AVATAR = 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg';
+const USER_AVATAR = 'http://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg';
 
 export default function TrainScreen() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { selectedDate, setSelectedDate } = useDate(); // Use context instead of local state
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [workoutState, setWorkoutState] = useState<'running' | 'paused'>('running');
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,6 +30,8 @@ export default function TrainScreen() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const router = useRouter();
   const { isAuthenticated, setIsAuthenticated } = useAuth();
+
+  // Remove the useEffect for selectedDateParam since we're using context
 
   // Initial load - only fetch workout dates once
   useEffect(() => {
@@ -44,14 +48,6 @@ export default function TrainScreen() {
       fetchWorkouts();
     }
   }, [selectedDate, isAuthenticated, isInitialLoad]);
-
-  useEffect(() => {
-    const testStorage = async () => {
-      const userData = await getUserData();
-      console.log('🧪 Test storage - User data:', userData);
-    };
-    testStorage();
-  }, []);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -96,22 +92,16 @@ export default function TrainScreen() {
       
       // Get user data from storage
       const userData = await getUserData();
-      console.log('🔍 User data from storage:', userData);
       
       if (!userData?.id) {
-        console.log('❌ No user ID found in storage');
         setExercises([]);
         setHasData(false);
         return;
       }
 
-      console.log('✅ User ID found:', userData.id);
-
-      const dateString = selectedDate.toISOString().split('T')[0];
-      console.log('📅 Fetching workouts for date:', dateString);
+      // Fix timezone issue: use moment to format date in local timezone
+      const dateString = moment(selectedDate).format('YYYY-MM-DD');
       const workoutsData = await workoutApi.getUserWorkouts(userData.id, dateString);
-      
-      console.log('📊 Workouts found:', workoutsData.length);
       
       if (workoutsData.length > 0) {
         const workout = workoutsData[0];
@@ -138,20 +128,18 @@ export default function TrainScreen() {
     }
   }
 
-  // Remove fetchWorkoutDates from the date change effect
+  // Updated to use the same optimized approach as home screen
   async function fetchWorkoutDates() {
     try {
       const userData = await getUserData();
       if (!userData?.id) return;
 
-      const workoutsData = await workoutApi.getUserWorkouts(userData.id);
+      // Get current week's start and end dates
+      const startOfWeek = moment().startOf('week').add(1, 'day').format('YYYY-MM-DD'); // Monday
+      const endOfWeek = moment().endOf('week').format('YYYY-MM-DD'); // Sunday
       
-      const dates = workoutsData.map((workout: any) => 
-        moment(workout.scheduledDate).format('YYYY-MM-DD')
-      );
-      
-      setWorkoutDates(dates);
-      console.log('📅 All workout dates:', dates);
+      const { workoutDates } = await homeApi.getWeekWorkouts(userData.id, startOfWeek, endOfWeek);
+      setWorkoutDates(workoutDates);
     } catch (error) {
       console.error('Error fetching workout dates:', error);
     }
@@ -189,11 +177,23 @@ export default function TrainScreen() {
   }
 
   function handleDateSelect(date: Date) {
-    setSelectedDate(date);
+    setSelectedDate(date); // Use context setter
   }
   
   function handleWeekChange(startDate: Date, endDate: Date) {
-    console.log('Week changed:', startDate, endDate);
+    // Fetch workout dates for the new week
+    const userData = getUserData().then(userData => {
+      if (userData?.id) {
+        const startDateStr = moment(startDate).format('YYYY-MM-DD');
+        const endDateStr = moment(endDate).format('YYYY-MM-DD');
+        
+        homeApi.getWeekWorkouts(userData.id, startDateStr, endDateStr)
+          .then(({ workoutDates }) => {
+            setWorkoutDates(workoutDates);
+          })
+          .catch(error => console.error('Error fetching workout dates for new week:', error));
+      }
+    });
   }
 
   const completedCount = exercises.filter(e => e.state === 'completed').length;
@@ -243,7 +243,6 @@ export default function TrainScreen() {
           {/* Calendar Bar */}
           <View style={{ paddingHorizontal: 24 }}>
             <StandardizedCalendarBar
-              selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
               onWeekChange={handleWeekChange}
               workoutDates={workoutDates}
@@ -288,7 +287,6 @@ export default function TrainScreen() {
         {/* Calendar Bar */}
         <View style={{ paddingHorizontal: 24 }}>
           <StandardizedCalendarBar
-            selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
             onWeekChange={handleWeekChange}
             workoutDates={workoutDates}
@@ -312,16 +310,16 @@ export default function TrainScreen() {
         </View>
         
         {/* Workout Stats */}
-        <View style={{ paddingHorizontal: 24 }}>
+        {/* <View style={{ paddingHorizontal: 24 }}>
           <WorkoutStats 
             minutes={currentWorkout?.duration || 28} 
             calories={currentWorkout?.caloriesBurned || 320} 
             avgBpm={currentWorkout?.averageHeartRate || 142} 
           />
-        </View>
+        </View> */}
         
         {/* Continue/Pause Buttons */}
-        <View style={{ paddingHorizontal: 24, flexDirection: 'row', gap: 12, marginBottom: 32 }}>
+        {/* <View style={{ paddingHorizontal: 24, flexDirection: 'row', gap: 12, marginBottom: 32 }}>
           <TouchableOpacity
             onPress={() => setWorkoutState(workoutState === 'running' ? 'paused' : 'running')}
             style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
@@ -337,7 +335,7 @@ export default function TrainScreen() {
           >
             <FontAwesome5 name={workoutState === 'running' ? 'pause' : 'play'} size={18} color={colors.primary} />
           </TouchableOpacity>
-        </View>
+        </View> */}
       </ScrollView>
       <AddTrainingModal visible={modalVisible} onClose={() => setModalVisible(false)} />
     </SafeAreaView>

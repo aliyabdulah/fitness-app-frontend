@@ -19,6 +19,21 @@ export interface UserData {
   role: "trainee" | "pt";
   trainees?: string[];
   personalTrainer?: string;
+  // Trainer-specific fields (for PTs)
+  bio?: string;
+  instagram?: string;
+  services?: Array<{
+    name: string;
+    description: string;
+    price: string;
+    isPopular?: boolean;
+  }>;
+  stats?: {
+    clientsCoached: string;
+    yearsExperience: number;
+    rating: number;
+    certifications: number;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -52,20 +67,23 @@ export interface Workout {
   updatedAt: string;
 }
 
-// Match your backend Trainer model exactly
+// Updated Trainer interface to match User model with role: "pt"
 export interface Trainer {
   _id: string;
   name: string;
-  image: string;
+  firstName: string;
+  lastName: string;
+  image?: string;
+  profilePicture?: string;
   bio: string;
   instagram?: string;
-  services: Array<{
+  services?: Array<{
     name: string;
     description: string;
     price: string;
     isPopular?: boolean;
   }>;
-  stats: {
+  stats?: {
     clientsCoached: string;
     yearsExperience: number;
     rating: number;
@@ -74,29 +92,63 @@ export interface Trainer {
 }
 
 export const homeApi = {
-  // Get today's workout for the user
-  async getTodayWorkout(userId: string): Promise<Workout | null> {
+  // Get workouts for a specific week (optimized approach)
+  async getWeekWorkouts(userId: string, startDate: string, endDate: string): Promise<{
+    workouts: Workout[];
+    workoutDates: string[];
+  }> {
     try {
       const token = await getToken();
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       
-      const response = await fetch(`${API_BASE_URL}/workouts/user/${userId}?date=${today}`, {
+      const response = await fetch(`${API_BASE_URL}/workouts/user/${userId}?startDate=${startDate}&endDate=${endDate}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch today\'s workout');
+        throw new Error('Failed to fetch week workouts');
       }
 
       const workouts = await response.json();
-      // Return the first scheduled workout for today
-      return workouts.find((workout: Workout) => workout.status === 'scheduled') || null;
+      
+      // Extract unique dates that have scheduled workouts
+      const workoutDates: string[] = [...new Set(
+        workouts
+          .filter((workout: Workout) => workout.status === 'scheduled')
+          .map((workout: Workout) => workout.scheduledDate.split('T')[0]) // Get YYYY-MM-DD part
+      )] as string[];
+      
+      console.log('📅 Week workouts fetched:', workouts.length, 'workouts');
+      console.log('📅 Workout dates for calendar:', workoutDates);
+      
+      return { workouts, workoutDates };
     } catch (error) {
-      console.error('Error fetching today\'s workout:', error);
-      return null;
+      console.error('Error fetching week workouts:', error);
+      return { workouts: [], workoutDates: [] };
     }
+  },
+
+  // Get workout for a specific date (from cached week data)
+  getWorkoutForDate(workouts: Workout[], date: string): Workout | null {
+    console.log('🔍 getWorkoutForDate called with date:', date);
+    console.log('🔍 Available workouts:', workouts.map(w => ({ 
+      name: w.name, 
+      scheduledDate: w.scheduledDate, 
+      dateOnly: w.scheduledDate.split('T')[0],
+      status: w.status 
+    })));
+    
+    const dateString = date; // date is already in YYYY-MM-DD format
+    const foundWorkout = workouts.find((workout: Workout) => {
+      const workoutDate = workout.scheduledDate.split('T')[0]; // Get YYYY-MM-DD part
+      const matches = workoutDate === dateString && workout.status === 'scheduled';
+      console.log(`🔍 Comparing ${workoutDate} with ${dateString}, status: ${workout.status}, matches: ${matches}`);
+      return matches;
+    });
+    
+    console.log('🔍 Found workout:', foundWorkout ? foundWorkout.name : 'null');
+    return foundWorkout || null;
   },
 
   // Get suggested trainers (top rated trainers)
@@ -117,9 +169,29 @@ export const homeApi = {
       const data = await response.json();
       // Your backend returns { trainers: [...] }
       const trainers = data.trainers || [];
+      
+      // Transform User model data to match Trainer interface
+      const transformedTrainers = trainers.map((trainer: any) => ({
+        _id: trainer._id,
+        name: trainer.name || `${trainer.firstName} ${trainer.lastName}`,
+        firstName: trainer.firstName,
+        lastName: trainer.lastName,
+        image: trainer.profilePicture || trainer.image,
+        profilePicture: trainer.profilePicture,
+        bio: trainer.bio || 'Personal Trainer',
+        instagram: trainer.instagram,
+        services: trainer.services || [],
+        stats: trainer.stats || {
+          clientsCoached: '0',
+          yearsExperience: 0,
+          rating: 4.5, // Default rating
+          certifications: 0
+        }
+      }));
+      
       // Sort by rating and return top 3
-      return trainers
-        .sort((a: Trainer, b: Trainer) => b.stats.rating - a.stats.rating)
+      return transformedTrainers
+        .sort((a: Trainer, b: Trainer) => (b.stats?.rating || 0) - (a.stats?.rating || 0))
         .slice(0, 3);
     } catch (error) {
       console.error('Error fetching suggested trainers:', error);

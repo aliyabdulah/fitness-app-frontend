@@ -83,6 +83,17 @@ export const bookTrainer = async (
 
 export const getMyTrainerSessions = () => api.get("/api/trainers/my-sessions");
 
+// Training Request Functions
+export const submitTrainingRequest = async (requestData: {
+  traineeId: string;
+  ptId: string;
+  serviceName: string;
+  message?: string;
+}) => {
+  const { data } = await api.post("/api/trainers/submit-request", requestData);
+  return data;
+};
+
 // Progress & Stats Functions
 export const getProgress = () => api.get("/api/progress/stats");
 

@@ -9,9 +9,12 @@ import { RecentAchievements } from '../../component/RecentAchievements';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StandardizedCalendarBar } from '../../component/StandardizedCalendarBar';
 import { homeApi, UserData, Workout, Trainer } from '../../api/home';
+import { workoutApi } from '../../api/workouts'; // Add this import
 import { getUserData, removeToken, removeUserData } from '../../api/storage';
 import { useAuth } from '../../context/AuthContext';
+import { useDate } from '../../context/DateContext'; // Add this import
 import { useRouter } from 'expo-router';
+import moment from 'moment';
 
 const stats = [
   {
@@ -60,42 +63,45 @@ const stats = [
   },
 ];
 
+const USER_AVATAR = 'http://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg';
+
 export default function HomeScreen() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { selectedDate, setSelectedDate } = useDate(); // Use context instead of local state
   const [todayWorkout, setTodayWorkout] = useState<Workout | null>(null);
+  const [workoutDates, setWorkoutDates] = useState<string[]>([]);
   const [suggestedTrainers, setSuggestedTrainers] = useState<Trainer[]>([]);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userFirstName, setUserFirstName] = useState<string>('Ahmed'); // Add this for display
+  const [userData, setUserData] = useState<any>(null); // Add this to store user data
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const router = useRouter();
 
-  // Fetch data when component mounts
+  // Initial load - only fetch workout dates once (like train screen)
   useEffect(() => {
     if (isAuthenticated) {
+      fetchWorkoutDates();
       fetchHomeData();
+      fetchUserDisplayName(); // Add this
+      setIsInitialLoad(false);
     }
   }, [isAuthenticated]);
 
-  // Fetch data when date changes
+  // Separate effect for date changes - only fetch workouts, not dates (like train screen)
   useEffect(() => {
-    if (isAuthenticated && userData?._id) {
+    if (isAuthenticated && !isInitialLoad) {
       fetchTodayWorkout();
     }
-  }, [selectedDate, userData]);
+  }, [selectedDate, isAuthenticated, isInitialLoad]);
 
   const fetchHomeData = async () => {
     try {
+      // Fetch user data and store it
       const user = await getUserData();
-      setUserData(user as UserData);
+      setUserData(user);
 
       // Fetch suggested trainers
       const trainers = await homeApi.getSuggestedTrainers();
       setSuggestedTrainers(trainers);
-
-      // Fetch today's workout
-      if (user?._id) {
-        const workout = await homeApi.getTodayWorkout(user._id);
-        setTodayWorkout(workout);
-      }
     } catch (error) {
       console.error('Error fetching home data:', error);
     }
@@ -103,21 +109,69 @@ export default function HomeScreen() {
 
   const fetchTodayWorkout = async () => {
     try {
-      if (userData?._id) {
-        const workout = await homeApi.getTodayWorkout(userData._id);
-        setTodayWorkout(workout);
+      // Get user data directly from storage (like train screen)
+      const userData = await getUserData();
+      
+      if (!userData?.id) return; // Use .id like train screen
+
+      const dateString = moment(selectedDate).format('YYYY-MM-DD');
+      const workoutsData = await workoutApi.getUserWorkouts(userData.id, dateString); // Use .id like train screen
+      
+      if (workoutsData.length > 0) {
+        setTodayWorkout(workoutsData[0] as unknown as Workout);
+      } else {
+        setTodayWorkout(null);
       }
     } catch (error) {
       console.error('Error fetching today\'s workout:', error);
+      setTodayWorkout(null);
+    }
+  };
+
+  const fetchWorkoutDates = async () => {
+    try {
+      // Get user data directly from storage (like train screen)
+      const userData = await getUserData();
+      if (!userData?.id) return; // Use .id like train screen
+
+      const startOfWeek = moment().startOf('week').add(1, 'day').format('YYYY-MM-DD');
+      const endOfWeek = moment().endOf('week').format('YYYY-MM-DD');
+      
+      const { workoutDates } = await homeApi.getWeekWorkouts(userData.id, startOfWeek, endOfWeek); // Use .id like train screen
+      setWorkoutDates(workoutDates);
+    } catch (error) {
+      console.error('Error fetching workout dates:', error);
+    }
+  };
+
+  // Add function to fetch user display name
+  const fetchUserDisplayName = async () => {
+    try {
+      const userData = await getUserData();
+      setUserFirstName(userData?.firstName || '');
+    } catch (error) {
+      console.error('Error fetching user display name:', error);
     }
   };
 
   function handleDateSelect(date: Date) {
-    setSelectedDate(date);
+    setSelectedDate(date); // Use context setter
   }
 
   function handleWeekChange(startDate: Date, endDate: Date) {
-    console.log('Week changed:', startDate, endDate);
+    // Fetch workout dates for the new week (like train screen)
+    const userData = getUserData().then(userData => {
+      if (userData?.id) { // Use .id like train screen
+        const startDateStr = moment(startDate).format('YYYY-MM-DD');
+        const endDateStr = moment(endDate).format('YYYY-MM-DD');
+        
+        homeApi.getWeekWorkouts(userData.id, startDateStr, endDateStr) // Use .id like train screen
+          .then(({ workoutDates }) => {
+            setWorkoutDates(workoutDates);
+          })
+          .catch(error => console.error('Error fetching workout dates for new week:', error));
+      }
+    });
   }
 
   const handleSignOut = () => {
@@ -159,27 +213,39 @@ export default function HomeScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.secondary} />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
           <View>
-            <Text style={{ color: colors.white, fontSize: 24, fontWeight: 'bold' }}>TrainX</Text>
-            <Text style={{ color: colors.gray400, fontSize: 12 }}>Hello, {userData?.firstName || 'Ahmed'}</Text>
+            <Text style={{ color: colors.white, fontSize: 26, fontWeight: 'bold' }}>TrainX</Text>
+            {/* Get user data directly for display (like train screen) */}
+            <Text style={{ color: colors.gray400, fontSize: 13, marginTop: 4 }}>
+              Hello, {userFirstName}
+            </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <TouchableOpacity
-              style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 8, marginRight: 8 }}
+              style={{ backgroundColor: colors.accent, borderRadius: 999, padding: 10, marginRight: 8 }}
               onPress={handleSignOut}
             >
               <FontAwesome5 name="power-off" size={18} color={colors.white} />
             </TouchableOpacity>
-            <Image source={{ uri: userData?.profilePicture || 'https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg' }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+            <View style={{ backgroundColor: 'red', width: 40, height: 40, borderRadius: 20 }}>
+              <Image 
+                source={{ 
+                  uri: userData?.profilePicture || USER_AVATAR // Direct usage as requested
+                }} 
+                style={{ width: 40, height: 40, borderRadius: 20 }} 
+                onError={(error) => console.log('Image loading error:', error.nativeEvent)}
+                onLoad={() => console.log('Image loaded successfully')}
+              />
+            </View>
           </View>
         </View>
         {/* Calendar Bar */}
-        <View style={{ paddingHorizontal: 20, paddingVertical: 12 }}>
+        <View style={{ paddingHorizontal: 24 }}>
           <StandardizedCalendarBar
-            selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
             onWeekChange={handleWeekChange}
+            workoutDates={workoutDates}
           />
         </View>
         {/* Stats Cards */}
@@ -190,10 +256,12 @@ export default function HomeScreen() {
             </View>
           ))}
         </View>
-        {/* Today Workout Card */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <TodayWorkoutCard workout={todayWorkout} />
-        </View>
+        {/* Today Workout Card - Only show if workout exists for selected date */}
+        {todayWorkout && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+            <TodayWorkoutCard workout={todayWorkout} />
+          </View>
+        )}
         {/* Suggested PT */}
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
           <SuggestedPT trainers={suggestedTrainers} />

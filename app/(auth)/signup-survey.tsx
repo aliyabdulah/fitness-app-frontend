@@ -123,12 +123,13 @@ export default function SignupSurveyScreen() {
   const { setIsAuthenticated } = useContext(AuthContext);
   const params = useLocalSearchParams();
   
-  // Get signup data from previous page
+  // Update the params to include profilePicture
   const signupData = {
     firstName: params.firstName as string,
     lastName: params.lastName as string,
     email: params.email as string,
     password: params.password as string,
+    profilePicture: params.profilePicture as string, // Add this line
   };
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -359,19 +360,26 @@ export default function SignupSurveyScreen() {
         const result = await register({
           ...signupData,
           ...surveyData,
+          image: signupData.profilePicture, // Add this line to pass the image
         });
 
-        // Remove auto-login - redirect to login page instead
-        Alert.alert(
-          'Account Created Successfully!',
-          'Your TrainX account has been created. Please login to continue.',
-          [
-            {
-              text: 'Go to Login',
-              onPress: () => router.replace("/(auth)/login")
-            }
-          ]
-        );
+        // Auto-login after successful registration
+        if (result.token && result.user) {
+          // Set authentication state
+          setIsAuthenticated(true);
+          
+          // Show success message and redirect to home
+          Alert.alert(
+            'Welcome to TrainX!',
+            'Your account has been created successfully.',
+            [
+              {
+                text: 'Get Started',
+                onPress: () => router.replace("/(protected)/home")
+              }
+            ]
+          );
+        }
       } catch (error: any) {
         const errorMessage = error.response?.data?.error || error.message || 'Please try again';
         Alert.alert('Registration Failed', errorMessage);

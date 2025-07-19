@@ -14,3 +14,4 @@ export { default as SearchBar } from './SearchBar';
 // TrainX Components
 export { TrainXFilterBar } from './TrainXFilterBar';
 export { TrainXTrainerCard } from './TrainXTrainerCard'; 
+export { MorphingSearchBar } from "./MorphingSearchBar"; 

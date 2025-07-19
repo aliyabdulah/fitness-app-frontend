@@ -1,11 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Dimensions } from 'react-native';
 import moment from 'moment';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { colors } from './theme';
+import { useDate } from '../context/DateContext'; // Add this import
 
 interface StandardizedCalendarBarProps {
-  selectedDate: Date;
   onDateSelect: (date: Date) => void;
   onWeekChange?: (startDate: Date, endDate: Date) => void;
   style?: any;
@@ -55,7 +55,6 @@ function getWeekDays(weekStart: Date, selectedDate: Date, workoutDates: string[]
 }
 
 export function StandardizedCalendarBar({
-  selectedDate,
   onDateSelect,
   onWeekChange,
   style,
@@ -63,17 +62,20 @@ export function StandardizedCalendarBar({
   calendarStripStyle,
   workoutDates = [] // Default to empty array
 }: StandardizedCalendarBarProps) {
-  // Initialize week start based on selected date, but keep it stable
-  const [weekStart, setWeekStart] = useState(() => 
-    moment(selectedDate).startOf('week').add(1, 'day').toDate()
-  );
-  
-  const weekDays = getWeekDays(weekStart, selectedDate, workoutDates);
+  const { selectedDate } = useDate(); // Get selected date from context
+
+  // Use useMemo for weekStart - this will automatically update when selectedDate changes
+  const weekStart = useMemo(() => {
+    return moment(selectedDate).startOf('week').add(1, 'day').toDate();
+  }, [selectedDate]);
+
+  const weekDays = useMemo(() => {
+    return getWeekDays(weekStart, selectedDate, workoutDates);
+  }, [weekStart, selectedDate, workoutDates]);
 
   const handleChevron = useCallback((dir: 'prev' | 'next') => {
-    // Move the week start by 7 days
+    // Calculate new week start based on current week start
     const newWeekStart = moment(weekStart).add(dir === 'prev' ? -7 : 7, 'days').toDate();
-    setWeekStart(newWeekStart);
     
     // Select the same day of the week in the new week
     const dayOfWeek = moment(selectedDate).day();

@@ -35,9 +35,10 @@ interface Workout {
 
 interface TodayWorkoutCardProps {
   workout?: Workout | null;
+  selectedDate?: Date; // Add this prop
 }
 
-export function TodayWorkoutCard({ workout }: TodayWorkoutCardProps) {
+export function TodayWorkoutCard({ workout, selectedDate }: TodayWorkoutCardProps) {
   const router = useRouter();
 
   // Use backend data or fallback to original hardcoded data
@@ -49,11 +50,29 @@ export function TodayWorkoutCard({ workout }: TodayWorkoutCardProps) {
   const muscleGroups = workout?.muscleGroups || ["Chest", "Shoulders", "Triceps", "Back"];
 
   const handleStartWorkout = () => {
-    router.push('/(protected)/train');
+    // Navigate to train screen with the selected date
+    if (selectedDate) {
+      const dateString = selectedDate.toISOString();
+      router.push({
+        pathname: '/(protected)/train',
+        params: { selectedDate: dateString }
+      });
+    } else {
+      router.push('/(protected)/train');
+    }
   };
 
   const handleViewDetails = () => {
-    router.push('/(protected)/train');
+    // Navigate to train screen with the selected date
+    if (selectedDate) {
+      const dateString = selectedDate.toISOString();
+      router.push({
+        pathname: '/(protected)/train',
+        params: { selectedDate: dateString }
+      });
+    } else {
+      router.push('/(protected)/train');
+    }
   };
 
   return (

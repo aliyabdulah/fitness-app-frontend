@@ -15,23 +15,100 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { colors } from "../../component/theme";
 import { ServiceCard } from "../../component/ServiceCard";
 import { StatCard } from "../../component/StatCard";
-import { getTrainerById } from "../../api/Data";
+import { getTrainerById, submitTrainingRequest } from "../../api/Data";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { getUserData } from "../../api/storage";
 
 export default function TrainerProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [trainer, setTrainer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedService, setSelectedService] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    // Get current user data
+    getUserData().then(setCurrentUser);
+    
     if (id) {
       getTrainerById(id as string)
-        .then((res) => setTrainer(res.data.trainer))
+        .then((res) => {
+          // Handle the new User model structure
+          const trainerData = res.data.trainer;
+          if (trainerData) {
+            // Transform the data to match expected structure
+            const transformedTrainer = {
+              ...trainerData,
+              name: trainerData.name || `${trainerData.firstName} ${trainerData.lastName}`,
+              image: trainerData.profilePicture || trainerData.image,
+              services: trainerData.services || [],
+              stats: trainerData.stats || {
+                clientsCoached: '0',
+                yearsExperience: 0,
+                rating: 4.5,
+                certifications: 0
+              },
+              bio: trainerData.bio || 'Personal Trainer'
+            };
+            setTrainer(transformedTrainer);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching trainer:', error);
+          setTrainer(null);
+        })
         .finally(() => setLoading(false));
     }
   }, [id]);
+
+  const handleApplyForTraining = async () => {
+    if (!currentUser || !trainer || selectedService === null) {
+      Alert.alert("Error", "Please select a service and ensure you're logged in.");
+      return;
+    }
+
+    // Debug logging
+    console.log('Current User:', currentUser);
+    console.log('Current User ID:', currentUser._id);
+    console.log('Trainer:', trainer);
+    console.log('Selected Service:', selectedService);
+
+    setSubmitting(true);
+    try {
+      const selectedServiceData = trainer.services[selectedService];
+      
+      const requestData = {
+        traineeId: currentUser._id || currentUser.id, // Try both _id and id
+        ptId: trainer._id,
+        serviceName: selectedServiceData.name,
+        message: `I'm interested in your ${selectedServiceData.name} service.`
+      };
+      
+      console.log('Request Data being sent:', requestData);
+      
+      const response = await submitTrainingRequest(requestData);
+      console.log('Response:', response);
+
+      Alert.alert(
+        "Application Submitted Successfully!",
+        `Your training application for ${selectedServiceData.name} has been sent to ${trainer.name}. You'll receive a response within 24-48 hours.`
+      );
+      
+      // Reset selection
+      setSelectedService(null);
+    } catch (error: any) {
+      console.error('Error submitting training request:', error);
+      console.error('Error details:', error.response?.data);
+      Alert.alert(
+        "Error",
+        `Failed to submit your application: ${error.response?.data?.message || error.message}`
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -47,6 +124,7 @@ export default function TrainerProfileScreen() {
       </View>
     );
   }
+  
   if (!trainer) {
     return (
       <View
@@ -79,13 +157,15 @@ export default function TrainerProfileScreen() {
             <FontAwesome5 name="arrow-left" size={20} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Trainer Profile</Text>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => {}}
             accessibilityLabel="Share profile"
           >
             <FontAwesome5 name="share" size={20} color={colors.white} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+          {/* empty view to push the title to the left */}
+          <View style={{width:50}}/> 
         </View>
         {/* Main Info */}
         <View style={styles.mainInfoCard}>
@@ -109,17 +189,23 @@ export default function TrainerProfileScreen() {
         {/* Services & Pricing */}
         <View style={{ paddingHorizontal: 24, marginBottom: 24 }}>
           <Text style={styles.sectionTitle}>Services & Pricing</Text>
-          {trainer.services.map((service: any, idx: number) => (
-            <ServiceCard
-              key={service.name}
-              name={service.name}
-              description={service.description}
-              price={service.price}
-              isPopular={service.isPopular}
-              selected={selectedService === idx}
-              onPress={() => setSelectedService(idx)}
-            />
-          ))}
+          {trainer.services && trainer.services.length > 0 ? (
+            trainer.services.map((service: any, idx: number) => (
+              <ServiceCard
+                key={service.name}
+                name={service.name}
+                description={service.description}
+                price={service.price}
+                isPopular={service.isPopular}
+                selected={selectedService === idx}
+                onPress={() => setSelectedService(idx)}
+              />
+            ))
+          ) : (
+            <View style={styles.bioCard}>
+              <Text style={styles.bioText}>No services available at the moment.</Text>
+            </View>
+          )}
         </View>
         {/* About */}
         <View style={{ paddingHorizontal: 24, marginBottom: 24 }}>
@@ -147,31 +233,30 @@ export default function TrainerProfileScreen() {
           />
         </View>
       </ScrollView>
-      {/* Book Now Button */}
+      {/* Apply for Training Button */}
       <View style={styles.bookNowWrapper}>
         <TouchableOpacity
           style={[
             styles.bookNowBtn,
-            { opacity: selectedService === null ? 0.5 : 1 },
+            { opacity: selectedService === null || submitting ? 0.5 : 1 },
           ]}
-          disabled={selectedService === null}
-          onPress={() => {
-            if (selectedService !== null) {
-              Alert.alert(
-                "Booking",
-                `Booking ${trainer.services[selectedService].name} with ${trainer.name}`
-              );
-            }
-          }}
-          accessibilityLabel="Book Now"
+          disabled={selectedService === null || submitting}
+          onPress={handleApplyForTraining}
+          accessibilityLabel="Apply for Training"
         >
-          <FontAwesome5
-            name="calendar-plus"
-            size={18}
-            color={colors.white}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.bookNowText}>Book Now</Text>
+          {submitting ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <FontAwesome5
+              name="calendar-plus"
+              size={18}
+              color={colors.white}
+              style={{ marginRight: 8 }}
+            />
+          )}
+          <Text style={styles.bookNowText}>
+            {submitting ? "Submitting..." : "Apply for Training"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

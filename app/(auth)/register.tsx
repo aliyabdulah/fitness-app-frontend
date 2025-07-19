@@ -15,6 +15,7 @@ import {
   View,
   SafeAreaView, // Add this import
 } from "react-native";
+import { compressImage } from '../../utils/imageCompression';
 
 const Colors = {
   primary: "#FF4C29",
@@ -77,7 +78,8 @@ export default function SignupBasicScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.3, // Reduced from 0.8 to 0.3 for better compression
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -90,7 +92,8 @@ export default function SignupBasicScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.3, // Reduced from 0.8 to 0.3 for better compression
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -141,7 +144,7 @@ export default function SignupBasicScreen() {
       return;
     }
 
-    // Navigate to survey with the form data
+    // Navigate to survey with the form data including profile picture
     router.push({
       pathname: "/(auth)/signup-survey",
       params: {
@@ -149,6 +152,7 @@ export default function SignupBasicScreen() {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
+        profilePicture: formData.profilePicture || '', // Add this line
       }
     });
   };
